@@ -1,0 +1,502 @@
+{% extends "base.html" %}
+{% block title %}Predict — SensorAI{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+
+  <!-- Page header -->
+  <div class="page-header mb-4">
+    <h1 class="page-title">
+      <i class="bi bi-cpu me-2 text-cyan"></i>Prediction Engine
+    </h1>
+    <p class="text-muted">
+      Upload sensor CSV data or manually set sensor values to get instant
+      RUL estimation, sensor forecasting, and anomaly detection.
+    </p>
+  </div>
+
+  <!-- ── Tabs ─────────────────────────────────────────────────────────────── -->
+  <ul class="nav nav-tabs predict-tabs mb-4" id="predictTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active" id="tab-csv-btn"
+              data-bs-toggle="tab" data-bs-target="#tab-csv"
+              type="button" role="tab">
+        <i class="bi bi-file-earmark-spreadsheet me-2"></i>Upload CSV
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="tab-live-btn"
+              data-bs-toggle="tab" data-bs-target="#tab-live"
+              type="button" role="tab">
+        <i class="bi bi-sliders me-2"></i>Live Sliders
+      </button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="tab-sample-btn"
+              data-bs-toggle="tab" data-bs-target="#tab-sample"
+              type="button" role="tab">
+        <i class="bi bi-cloud-download me-2"></i>Sample Data
+      </button>
+    </li>
+  </ul>
+
+  <div class="tab-content" id="predictTabContent">
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         TAB 1 — CSV Upload
+    ════════════════════════════════════════════════════════════════════ -->
+    <div class="tab-pane fade show active" id="tab-csv" role="tabpanel">
+      <div class="row g-4">
+
+        <!-- Upload panel -->
+        <div class="col-lg-4">
+          <div class="glass-card h-100">
+            <h5 class="card-section-title mb-3">
+              <i class="bi bi-upload me-2"></i>Upload Sensor File
+            </h5>
+            <p class="text-muted small mb-3">
+              Columns = sensors (s1–s14), Rows = timesteps.
+              Minimum <strong>{{ window }} rows</strong> required.
+            </p>
+
+            <!-- Drop zone -->
+            <div class="drop-zone" id="dropZone">
+              <div class="drop-zone-inner">
+                <i class="bi bi-file-earmark-arrow-up drop-zone-icon"></i>
+                <p class="drop-zone-text">Drag & drop CSV here</p>
+                <p class="drop-zone-sub">or click to browse files</p>
+              </div>
+              <input type="file" id="csvFile" accept=".csv" class="drop-zone-input" />
+            </div>
+
+            <div id="fileInfo" class="file-info mt-2 d-none"></div>
+
+            <button id="btnAnalyse" class="btn btn-cyan w-100 mt-3" disabled>
+              <span class="btn-text">
+                <i class="bi bi-play-fill me-2"></i>Analyse
+              </span>
+              <span class="btn-spinner d-none">
+                <span class="spinner-border spinner-border-sm me-2"></span>
+                Running…
+              </span>
+            </button>
+
+            <!-- Quick download links -->
+            <div class="mt-3 pt-3 border-top-dim">
+              <div class="text-muted small mb-2">Or try a sample file:</div>
+              <div class="d-flex gap-2 flex-wrap">
+                <a href="/api/sample/healthy"      class="badge-link">Healthy</a>
+                <a href="/api/sample/degrading"    class="badge-link">Degrading</a>
+                <a href="/api/sample/near_failure" class="badge-link warning">Near Failure</a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Results panel -->
+        <div class="col-lg-8">
+          <!-- Placeholder (before any prediction) -->
+          <div id="csvPlaceholder" class="results-placeholder">
+            <i class="bi bi-bar-chart-line results-placeholder-icon"></i>
+            <p>Upload a CSV file and click <strong>Analyse</strong> to see the prediction dashboard.</p>
+          </div>
+
+          <!-- Status banner (hidden until result) -->
+          <div id="csvStatusBanner" class="status-banner d-none mb-3"></div>
+
+          <!-- KPI row (hidden until result) -->
+          <div id="csvKpis" class="row g-3 mb-4 d-none">
+            <div class="col-6 col-md-3">
+              <div class="kpi-card">
+                <div class="kpi-icon"><i class="bi bi-clock-history"></i></div>
+                <div class="kpi-value" id="kpiRUL">—</div>
+                <div class="kpi-label">RUL (cycles)</div>
+              </div>
+            </div>
+            <div class="col-6 col-md-3">
+              <div class="kpi-card">
+                <div class="kpi-icon"><i class="bi bi-heart-pulse"></i></div>
+                <div class="kpi-value" id="kpiHealth">—</div>
+                <div class="kpi-label">Health %</div>
+              </div>
+            </div>
+            <div class="col-6 col-md-3">
+              <div class="kpi-card">
+                <div class="kpi-icon"><i class="bi bi-activity"></i></div>
+                <div class="kpi-value" id="kpiAnomaly">—</div>
+                <div class="kpi-label">Anomaly Score</div>
+              </div>
+            </div>
+            <div class="col-6 col-md-3">
+              <div class="kpi-card">
+                <div class="kpi-icon"><i class="bi bi-cpu"></i></div>
+                <div class="kpi-value" id="kpiModel">—</div>
+                <div class="kpi-label">Model</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Chart -->
+          <div id="csvChart" class="chart-wrapper d-none">
+            <img id="csvChartImg" src="" alt="Prediction Dashboard"
+                 class="img-fluid rounded-3" />
+          </div>
+
+          <!-- Sensor forecast table -->
+          <div id="csvForecastTable" class="mt-4 d-none">
+            <h6 class="text-muted mb-2">
+              <i class="bi bi-table me-2"></i>Sensor Forecast — Next Timestep
+            </h6>
+            <div class="table-responsive">
+              <table class="table table-dark table-hover table-sm forecast-table">
+                <thead>
+                  <tr>
+                    <th>Sensor</th>
+                    <th>Predicted Value</th>
+                    <th>Trend</th>
+                  </tr>
+                </thead>
+                <tbody id="forecastBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         TAB 2 — Live Sliders
+    ════════════════════════════════════════════════════════════════════ -->
+    <div class="tab-pane fade" id="tab-live" role="tabpanel">
+      <div class="row g-4">
+
+        <!-- Sliders panel -->
+        <div class="col-lg-4">
+          <div class="glass-card">
+            <h5 class="card-section-title mb-1">
+              <i class="bi bi-sliders me-2"></i>Manual Sensor Input
+            </h5>
+            <p class="text-muted small mb-3">
+              Normalised values: −3 = far below baseline · 0 = healthy · +3 = critical high
+            </p>
+
+            <!-- Quick presets -->
+            <div class="mb-3">
+              <div class="text-muted small mb-1">Quick presets:</div>
+              <div class="d-flex gap-2">
+                <button class="btn btn-sm btn-outline-success preset-btn" data-val="0">Healthy</button>
+                <button class="btn btn-sm btn-outline-warning preset-btn" data-val="1.5">Stressed</button>
+                <button class="btn btn-sm btn-outline-danger preset-btn"  data-val="2.8">Critical</button>
+              </div>
+            </div>
+
+            <div id="sliderContainer">
+              {% for s in sensors %}
+              <div class="slider-row mb-2">
+                <div class="d-flex justify-content-between mb-1">
+                  <label class="slider-label">{{ s }}</label>
+                  <span class="slider-val mono" id="val_{{ s }}">0.00</span>
+                </div>
+                <input type="range" class="sensor-slider form-range"
+                       id="sl_{{ s }}" data-sensor="{{ s }}"
+                       min="-3" max="3" step="0.05" value="0" />
+              </div>
+              {% endfor %}
+            </div>
+
+            <button id="btnLivePredict" class="btn btn-cyan w-100 mt-3">
+              <span class="btn-text">
+                <i class="bi bi-lightning-fill me-2"></i>Predict
+              </span>
+              <span class="btn-spinner d-none">
+                <span class="spinner-border spinner-border-sm me-2"></span>
+                Running…
+              </span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Results -->
+        <div class="col-lg-8">
+          <div id="livePlaceholder" class="results-placeholder">
+            <i class="bi bi-sliders results-placeholder-icon"></i>
+            <p>Adjust the sensor sliders and click <strong>Predict</strong> to run the model.</p>
+          </div>
+
+          <div id="liveStatusBanner" class="status-banner d-none mb-3"></div>
+
+          <div id="liveKpis" class="row g-3 mb-4 d-none">
+            <div class="col-6 col-md-3">
+              <div class="kpi-card">
+                <div class="kpi-icon"><i class="bi bi-clock-history"></i></div>
+                <div class="kpi-value" id="liveRUL">—</div>
+                <div class="kpi-label">RUL (cycles)</div>
+              </div>
+            </div>
+            <div class="col-6 col-md-3">
+              <div class="kpi-card">
+                <div class="kpi-icon"><i class="bi bi-heart-pulse"></i></div>
+                <div class="kpi-value" id="liveHealth">—</div>
+                <div class="kpi-label">Health %</div>
+              </div>
+            </div>
+            <div class="col-6 col-md-3">
+              <div class="kpi-card">
+                <div class="kpi-icon"><i class="bi bi-activity"></i></div>
+                <div class="kpi-value" id="liveAnomaly">—</div>
+                <div class="kpi-label">Anomaly Score</div>
+              </div>
+            </div>
+            <div class="col-6 col-md-3">
+              <div class="kpi-card">
+                <div class="kpi-icon"><i class="bi bi-cpu"></i></div>
+                <div class="kpi-value" id="liveModel">—</div>
+                <div class="kpi-label">Model</div>
+              </div>
+            </div>
+          </div>
+
+          <div id="liveChart" class="chart-wrapper d-none">
+            <img id="liveChartImg" src="" alt="Live Prediction Dashboard"
+                 class="img-fluid rounded-3" />
+          </div>
+
+          <div id="liveForecastTable" class="mt-4 d-none">
+            <h6 class="text-muted mb-2">
+              <i class="bi bi-table me-2"></i>Sensor Forecast — Next Timestep
+            </h6>
+            <div class="table-responsive">
+              <table class="table table-dark table-hover table-sm forecast-table">
+                <thead>
+                  <tr><th>Sensor</th><th>Predicted Value</th><th>Trend</th></tr>
+                </thead>
+                <tbody id="liveForecastBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════════════════════
+         TAB 3 — Sample Data
+    ════════════════════════════════════════════════════════════════════ -->
+    <div class="tab-pane fade" id="tab-sample" role="tabpanel">
+      <div class="row justify-content-center">
+        <div class="col-lg-8">
+          <div class="glass-card">
+            <h5 class="card-section-title mb-3">
+              <i class="bi bi-cloud-download me-2"></i>Download Sample CSV Files
+            </h5>
+            <p class="text-muted mb-4">
+              Don't have engine sensor data? Download a realistic synthetic sample,
+              then upload it in the <strong>Upload CSV</strong> tab.
+            </p>
+
+            <div class="row g-3">
+              <div class="col-md-4">
+                <div class="scenario-card normal-scenario">
+                  <div class="scenario-icon">🟢</div>
+                  <h6>Healthy Engine</h6>
+                  <p class="text-muted small">Stable readings near baseline. RUL ≈ 100+ cycles.</p>
+                  <a href="/api/sample/healthy" class="btn btn-sm btn-outline-success w-100">
+                    <i class="bi bi-download me-1"></i>Download
+                  </a>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="scenario-card warning-scenario">
+                  <div class="scenario-icon">🟡</div>
+                  <h6>Degrading Engine</h6>
+                  <p class="text-muted small">Gradual sensor drift. RUL ≈ 40–70 cycles.</p>
+                  <a href="/api/sample/degrading" class="btn btn-sm btn-outline-warning w-100">
+                    <i class="bi bi-download me-1"></i>Download
+                  </a>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="scenario-card danger-scenario">
+                  <div class="scenario-icon">🔴</div>
+                  <h6>Near Failure</h6>
+                  <p class="text-muted small">Critical degradation. RUL ≈ &lt;20 cycles.</p>
+                  <a href="/api/sample/near_failure" class="btn btn-sm btn-outline-danger w-100">
+                    <i class="bi bi-download me-1"></i>Download
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-4 p-3 info-box">
+              <h6><i class="bi bi-info-circle me-2"></i>Expected CSV Format</h6>
+              <p class="text-muted small mb-2">Columns must include sensor names (s1 – s14). Each row is one cycle/timestep. Minimum <strong>{{ window }} rows</strong>.</p>
+              <pre class="code-pre">s1,s2,s3,s4,s5,s6,s7,s8,s9,s10,s11,s12,s13,s14
+518.67,642.68,1590.09,1408.85,14.62,21.61,553.36,...
+518.67,642.65,1590.10,1408.82,14.61,21.62,553.34,...</pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /tab-content -->
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── CSV Upload Tab ──────────────────────────────────────────────────────────
+const dropZone  = document.getElementById("dropZone");
+const csvFile   = document.getElementById("csvFile");
+const fileInfo  = document.getElementById("fileInfo");
+const btnAnalyse = document.getElementById("btnAnalyse");
+
+function setFile(f) {
+  if (!f) return;
+  fileInfo.textContent = `📄 ${f.name}  (${(f.size/1024).toFixed(1)} KB)`;
+  fileInfo.classList.remove("d-none");
+  btnAnalyse.disabled = false;
+}
+
+dropZone.addEventListener("click", () => csvFile.click());
+csvFile.addEventListener("change", e => setFile(e.target.files[0]));
+
+dropZone.addEventListener("dragover", e => {
+  e.preventDefault();
+  dropZone.classList.add("drag-over");
+});
+dropZone.addEventListener("dragleave", () => dropZone.classList.remove("drag-over"));
+dropZone.addEventListener("drop", e => {
+  e.preventDefault();
+  dropZone.classList.remove("drag-over");
+  const f = e.dataTransfer.files[0];
+  if (f) { setFile(f); csvFile._file = f; }
+});
+
+btnAnalyse.addEventListener("click", async () => {
+  const file = csvFile.files[0] || csvFile._file;
+  if (!file) return;
+
+  setLoading(btnAnalyse, true);
+  const fd = new FormData();
+  fd.append("file", file);
+
+  try {
+    const res  = await fetch("/api/predict/csv", { method: "POST", body: fd });
+    const data = await res.json();
+    if (data.error) { showError("csvStatusBanner", data.error); setLoading(btnAnalyse, false); return; }
+    renderResults("csv", data);
+  } catch (err) {
+    showError("csvStatusBanner", "Network error: " + err.message);
+  }
+  setLoading(btnAnalyse, false);
+});
+
+// ── Live Sliders Tab ────────────────────────────────────────────────────────
+document.querySelectorAll(".sensor-slider").forEach(sl => {
+  sl.addEventListener("input", () => {
+    document.getElementById("val_" + sl.dataset.sensor).textContent =
+      parseFloat(sl.value).toFixed(2);
+  });
+});
+
+document.querySelectorAll(".preset-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const v = parseFloat(btn.dataset.val);
+    document.querySelectorAll(".sensor-slider").forEach(sl => {
+      sl.value = v;
+      document.getElementById("val_" + sl.dataset.sensor).textContent = v.toFixed(2);
+    });
+  });
+});
+
+document.getElementById("btnLivePredict").addEventListener("click", async () => {
+  const btn   = document.getElementById("btnLivePredict");
+  const vals  = [...document.querySelectorAll(".sensor-slider")].map(s => parseFloat(s.value));
+  setLoading(btn, true);
+
+  try {
+    const res  = await fetch("/api/predict/live", {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({ sensor_values: vals }),
+    });
+    const data = await res.json();
+    if (data.error) { showError("liveStatusBanner", data.error); setLoading(btn, false); return; }
+    renderResults("live", data);
+  } catch(err) {
+    showError("liveStatusBanner", "Network error: " + err.message);
+  }
+  setLoading(btn, false);
+});
+
+// ── Helpers ─────────────────────────────────────────────────────────────────
+function setLoading(btn, on) {
+  btn.querySelector(".btn-text").classList.toggle("d-none", on);
+  btn.querySelector(".btn-spinner").classList.toggle("d-none", !on);
+  btn.disabled = on;
+}
+
+function showError(bannerId, msg) {
+  const el = document.getElementById(bannerId);
+  el.innerHTML = `<i class="bi bi-exclamation-triangle me-2"></i>${msg}`;
+  el.className = "status-banner alert alert-danger";
+  el.classList.remove("d-none");
+}
+
+function statusConfig(status) {
+  const map = {
+    NORMAL:  { cls: "alert-success",  icon: "✅", label: "System NORMAL — All sensors within acceptable range" },
+    WARNING: { cls: "alert-warning",  icon: "⚠️", label: "WARNING — Sensors showing signs of degradation" },
+    ANOMALY: { cls: "alert-danger",   icon: "🚨", label: "ANOMALY DETECTED — Immediate inspection recommended" },
+  };
+  return map[status] || map["NORMAL"];
+}
+
+function renderResults(prefix, data) {
+  const cfg = statusConfig(data.status);
+
+  // Banner
+  const banner = document.getElementById(prefix + "StatusBanner");
+  banner.innerHTML = `${cfg.icon}&nbsp; <strong>${cfg.label}</strong>`;
+  banner.className = `status-banner alert ${cfg.cls}`;
+  banner.classList.remove("d-none");
+
+  // KPIs
+  document.getElementById(prefix === "csv" ? "kpiRUL"    : "liveRUL").textContent    = data.rul_cycles + " cyc";
+  document.getElementById(prefix === "csv" ? "kpiHealth" : "liveHealth").textContent = data.health_pct + "%";
+  document.getElementById(prefix === "csv" ? "kpiAnomaly": "liveAnomaly").textContent= data.anomaly_score;
+  document.getElementById(prefix === "csv" ? "kpiModel"  : "liveModel").textContent  = data.model;
+  document.getElementById(prefix === "csv" ? "csvKpis"   : "liveKpis").classList.remove("d-none");
+
+  // Chart
+  const imgEl = document.getElementById(prefix + "ChartImg");
+  imgEl.src = "data:image/png;base64," + data.chart_b64;
+  document.getElementById(prefix + "Chart").classList.remove("d-none");
+
+  // Placeholder
+  document.getElementById(prefix + "Placeholder").classList.add("d-none");
+
+  // Forecast table
+  const tbody = document.getElementById(prefix === "csv" ? "forecastBody" : "liveForecastBody");
+  tbody.innerHTML = "";
+  Object.entries(data.sensor_forecast).forEach(([s, v]) => {
+    const trend = v > 0.5 ? "↑ High" : v < -0.5 ? "↓ Low" : "→ Normal";
+    const tclass = v > 0.5 ? "text-warning" : v < -0.5 ? "text-cyan" : "text-success";
+    tbody.innerHTML += `<tr>
+      <td><span class="mono">${s}</span></td>
+      <td class="mono ${v > 1 ? "text-warning" : ""}">${v > 0 ? "+" : ""}${v.toFixed(4)}</td>
+      <td class="${tclass}">${trend}</td>
+    </tr>`;
+  });
+  document.getElementById(prefix + "ForecastTable").classList.remove("d-none");
+
+  // Scroll to results
+  banner.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+// ── Auto-activate tab from URL param ────────────────────────────────────────
+const urlTab = new URLSearchParams(window.location.search).get("tab");
+if (urlTab === "live")   document.getElementById("tab-live-btn").click();
+if (urlTab === "sample") document.getElementById("tab-sample-btn").click();
+</script>
+{% endblock %}

@@ -1,0 +1,283 @@
+{% extends "base.html" %}
+{% block title %}About — SensorAI{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+
+  <div class="page-header mb-5">
+    <h1 class="page-title">
+      <i class="bi bi-info-circle me-2 text-cyan"></i>About This Project
+    </h1>
+    <p class="text-muted">
+      A production-quality deep learning system for industrial predictive maintenance,
+      built on NASA's turbofan engine degradation dataset.
+    </p>
+  </div>
+
+  <div class="row g-5">
+
+    <!-- Left column -->
+    <div class="col-lg-7">
+
+      <!-- What it does -->
+      <div class="about-section mb-5">
+        <h3 class="about-section-title">
+          <span class="about-section-num">01</span> What It Does
+        </h3>
+        <p>
+          Given a window of <strong>{{ info.window }}</strong> historical sensor readings, the system
+          produces three simultaneous outputs from a single neural network inference:
+        </p>
+        <ul class="about-list">
+          <li>
+            <i class="bi bi-graph-up text-cyan"></i>
+            <div>
+              <strong>Sensor Forecast</strong> — predicted next-timestep value for each of the
+              {{ info.n_sensors }} sensor channels.
+            </div>
+          </li>
+          <li>
+            <i class="bi bi-clock-history text-cyan"></i>
+            <div>
+              <strong>Remaining Useful Life (RUL)</strong> — how many engine cycles remain
+              before predicted failure. Max is {{ info.max_rul }} cycles.
+            </div>
+          </li>
+          <li>
+            <i class="bi bi-shield-exclamation text-cyan"></i>
+            <div>
+              <strong>Anomaly Score</strong> — reconstruction error between prediction and
+              actual reading. Above threshold ({{ info.threshold }}) triggers an alert.
+            </div>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Architecture -->
+      <div class="about-section mb-5">
+        <h3 class="about-section-title">
+          <span class="about-section-num">02</span> Model Architecture
+        </h3>
+        <p>
+          The dual-output {{ info.best_model }} network shares a common recurrent backbone
+          that then splits into two specialised prediction heads:
+        </p>
+        <div class="arch-diagram">
+          <div class="arch-row">
+            <div class="arch-box input">Input<br/><small>30 × {{ info.n_features }} tensor</small></div>
+          </div>
+          <div class="arch-arrow">↓</div>
+          <div class="arch-row">
+            <div class="arch-box rnn">{{ info.best_model }} Block 1<br/><small>128 units · return_seq</small></div>
+          </div>
+          <div class="arch-arrow">↓</div>
+          <div class="arch-row">
+            <div class="arch-box norm">BatchNorm + Dropout(0.30)</div>
+          </div>
+          <div class="arch-arrow">↓</div>
+          <div class="arch-row">
+            <div class="arch-box rnn">{{ info.best_model }} Block 2<br/><small>64 units</small></div>
+          </div>
+          <div class="arch-arrow">↓</div>
+          <div class="arch-row">
+            <div class="arch-box norm">BatchNorm + Dropout(0.20)</div>
+          </div>
+          <div class="arch-arrow">↓</div>
+          <div class="arch-row">
+            <div class="arch-box shared">Shared Dense (64 · ReLU)</div>
+          </div>
+          <div class="arch-split-row">
+            <div class="arch-branch">
+              <div class="arch-arrow">↓</div>
+              <div class="arch-box head">Sensor Head<br/><small>Dense(32) → {{ info.n_sensors }}</small></div>
+            </div>
+            <div class="arch-branch">
+              <div class="arch-arrow">↓</div>
+              <div class="arch-box head rul">RUL Head<br/><small>Dense(16) → 1</small></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Feature engineering -->
+      <div class="about-section mb-5">
+        <h3 class="about-section-title">
+          <span class="about-section-num">03</span> Feature Engineering Pipeline
+        </h3>
+        <div class="row g-3">
+          <div class="col-sm-6">
+            <div class="feat-step">
+              <div class="feat-num">1</div>
+              <div>
+                <strong>Z-score Normalisation</strong>
+                <p class="text-muted small mb-0">Per-column standardisation at inference time</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-sm-6">
+            <div class="feat-step">
+              <div class="feat-num">2</div>
+              <div>
+                <strong>Rolling Statistics</strong>
+                <p class="text-muted small mb-0">Window=10: mean, std, trend (diff) per sensor</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-sm-6">
+            <div class="feat-step">
+              <div class="feat-num">3</div>
+              <div>
+                <strong>Cross-sensor Ratios</strong>
+                <p class="text-muted small mb-0">Pairwise ratios between first 3 sensor pairs</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-sm-6">
+            <div class="feat-step">
+              <div class="feat-num">4</div>
+              <div>
+                <strong>MAD Health Score</strong>
+                <p class="text-muted small mb-0">Mean absolute deviation across all sensors</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-sm-6">
+            <div class="feat-step">
+              <div class="feat-num">5</div>
+              <div>
+                <strong>Sliding Window</strong>
+                <p class="text-muted small mb-0">Last 30 timesteps → shape (1, 30, {{ info.n_features }})</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="text-muted small mt-3">
+          This pipeline expands {{ info.n_sensors }} raw sensors to
+          <strong>{{ info.n_features }} engineered features</strong>, giving the model rich
+          temporal context.
+        </p>
+      </div>
+
+      <!-- Dataset -->
+      <div class="about-section">
+        <h3 class="about-section-title">
+          <span class="about-section-num">04</span> Dataset — NASA CMAPSS FD001
+        </h3>
+        <div class="table-responsive">
+          <table class="table table-dark table-bordered about-table">
+            <tbody>
+              <tr><th scope="row">Source</th><td>NASA Prognostics Center of Excellence</td></tr>
+              <tr><th scope="row">Engines</th><td>150 simulated turbofan engines (run-to-failure)</td></tr>
+              <tr><th scope="row">Sensors</th><td>{{ info.n_sensors }} active measurements per cycle</td></tr>
+              <tr><th scope="row">Labels</th><td>RUL per timestep (0 = failure)</td></tr>
+              <tr><th scope="row">Fault mode</th><td>HPC (High Pressure Compressor) degradation</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Right column — sidebar -->
+    <div class="col-lg-5">
+
+      <!-- Author card -->
+      <div class="author-card mb-4">
+        <div class="author-avatar">DKD</div>
+        <div class="author-info">
+          <h5 class="author-name">{{ info.author }}</h5>
+          <p class="text-muted small mb-2">Machine Learning Engineer</p>
+          <div class="d-flex gap-2 flex-wrap">
+            <a href="https://dinrajkdinesh.vercel.app" target="_blank" rel="noopener"
+               class="btn btn-sm btn-outline-cyan">
+              <i class="bi bi-globe me-1"></i>Portfolio
+            </a>
+            <a href="https://github.com/dinraj910" target="_blank" rel="noopener"
+               class="btn btn-sm btn-outline-light">
+              <i class="bi bi-github me-1"></i>GitHub
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Model comparison table -->
+      <div class="glass-card mb-4">
+        <h5 class="card-section-title mb-3">
+          <i class="bi bi-bar-chart me-2"></i>Model Comparison
+        </h5>
+        <div class="table-responsive">
+          <table class="table table-dark table-sm mb-0 about-table">
+            <thead>
+              <tr>
+                <th>Metric</th>
+                <th class="text-cyan">LSTM</th>
+                <th class="text-warning">GRU</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Sensor RMSE</td>
+                <td>{{ info.lstm_rmse }}</td>
+                <td>{{ info.gru_rmse }}</td>
+              </tr>
+              <tr>
+                <td>RUL MAE ⭐</td>
+                <td class="text-success fw-bold">{{ info.lstm_rul_mae }}</td>
+                <td>{{ info.gru_rul_mae }}</td>
+              </tr>
+              <tr>
+                <td>Parameters</td>
+                <td>{{ info.lstm_params }}</td>
+                <td>{{ info.gru_params }}</td>
+              </tr>
+              <tr>
+                <td>Latency</td>
+                <td>0.25 ms</td>
+                <td>0.26 ms</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="active-badge mt-2">
+          <i class="bi bi-circle-fill me-1"></i>Active model: <strong>{{ info.best_model }}</strong>
+        </div>
+      </div>
+
+      <!-- Tech stack -->
+      <div class="glass-card mb-4">
+        <h5 class="card-section-title mb-3">
+          <i class="bi bi-stack me-2"></i>Tech Stack
+        </h5>
+        <div class="tech-grid">
+          <div class="tech-item"><span class="tech-icon">🧠</span> TensorFlow {{ info.tf_version }}</div>
+          <div class="tech-item"><span class="tech-icon">🌶️</span> Flask 3.x</div>
+          <div class="tech-item"><span class="tech-icon">🐼</span> Pandas</div>
+          <div class="tech-item"><span class="tech-icon">🔢</span> NumPy</div>
+          <div class="tech-item"><span class="tech-icon">📊</span> Matplotlib</div>
+          <div class="tech-item"><span class="tech-icon">🔬</span> Scikit-learn</div>
+          <div class="tech-item"><span class="tech-icon">🎨</span> Bootstrap 5</div>
+          <div class="tech-item"><span class="tech-icon">⚡</span> Fetch API</div>
+        </div>
+      </div>
+
+      <!-- Sensor channels -->
+      <div class="glass-card">
+        <h5 class="card-section-title mb-3">
+          <i class="bi bi-broadcast me-2"></i>Active Sensor Channels ({{ info.n_sensors }})
+        </h5>
+        <div class="sensor-grid">
+          {% for s in info.sensors %}
+          <span class="sensor-badge">{{ s }}</span>
+          {% endfor %}
+        </div>
+        <p class="text-muted small mt-2 mb-0">
+          Each sensor generates 3 rolling features + 5 cross-sensor features,
+          totalling {{ info.n_features }} features per timestep.
+        </p>
+      </div>
+
+    </div>
+
+  </div><!-- /row -->
+</div>
+{% endblock %}
